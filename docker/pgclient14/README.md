@@ -9,6 +9,9 @@ There are currently two versions of this available, which can be catered to your
 - alpine (3.18): very small, quick to spin up, but limited by alpine repos if you need other tools.
 - ubuntu (20.04): heavier, but apt has pretty extensive offerings in terms of other packages available for use.
 
+## Prebuilt copies of image
+These are available at https://hub.docker.com/r/macnettj/pgclient14
+
 ## Execution
 Both of the examples below spin the container up as interactive/terminal mode.
 
