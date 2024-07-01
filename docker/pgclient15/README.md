@@ -10,7 +10,7 @@ There are currently two versions of this available, which can be catered to your
 - ubuntu (20.04): heavier, but apt has pretty extensive offerings in terms of other packages available for use.  There may be a 22.04/jammy release in the future, but it appears as though `postgresql-client-15` and jammy have conflicting libraries at the moment.
 
 ## Prebuilt copies of image
-These are available at https://hub.docker.com/r/macnettj/pgclient14
+These are available at https://hub.docker.com/r/macnettj/pgclient15
 
 ## Execution
 Both of the examples below spin the container up as interactive/terminal mode.
