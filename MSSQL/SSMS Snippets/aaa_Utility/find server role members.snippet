@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>Find server role members</Title>
+        <Shortcut></Shortcut>
+	<Description>Retrieves all server principals associated with a server-level role.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+select r.name as serverRoleName, r.principal_id as serverRoleprincipalID, r.owning_principal_id as ownerprincipalid, u.* 
+from sys.server_principals u with (nolocK)
+	inner join sys.server_role_members rm with (nolocK)
+		on u.principal_id = rm.member_principal_id
+	inner join sys.server_principals r with (nolock)
+		on r.principal_id = rm.role_principal_id
+where u.type <> 'R']]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

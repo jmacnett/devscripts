@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get current index fragmentation</Title>
+        <Shortcut></Shortcut>
+	<Description>Returns the current fragmentation level of all indexes in the database</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+select so.object_id, si.index_id, s.avg_fragmentation_in_percent, page_count, so.name, si.name, ss.name
+from sys.dm_db_index_physical_stats(db_id(), null, null, null, null) s 
+		inner join sys.objects so on s.object_id = so.object_id
+		inner join sys.schemas ss on so.schema_id = ss.schema_id
+		inner join sys.indexes si on s.object_id = si.object_id and s.index_id = si.index_id
+where s.avg_fragmentation_in_percent > 5 
+		and not si.[name] is null
+order by s.avg_fragmentation_in_percent desc		
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

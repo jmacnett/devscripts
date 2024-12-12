@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>Get current transaction isolation level</Title>
+        <Shortcut></Shortcut>
+	<Description>Retrieves the current transaction isolation level in a readable form</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[SELECT 
+	CASE transaction_isolation_level 
+		WHEN 0 THEN 'Unspecified' 
+		WHEN 1 THEN 'ReadUncommitted' 
+		WHEN 2 THEN 'ReadCommitted' 
+		WHEN 3 THEN 'RepeatableRead' 
+		WHEN 4 THEN 'Serializable' 
+		WHEN 5 THEN 'Snapshot' 
+	END AS TRANSACTION_ISOLATION_LEVEL 
+FROM sys.dm_exec_sessions 
+where session_id = @@SPID $end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

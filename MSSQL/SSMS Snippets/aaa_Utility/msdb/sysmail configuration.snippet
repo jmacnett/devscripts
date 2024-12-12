@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>sysmail configuration</Title>
+        <Shortcut></Shortcut>
+	<Description>retrieves all dbmail accounts and profiles, and what they're wired to</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+select pp.is_default
+	,s.servertype
+	,s.servername
+	,s.port
+	,s.username
+	,s.enable_ssl
+	,a.name as accountname
+	,a.description as accountDesc
+	,a.email_address
+	,a.display_name
+	,a.replyto_address
+	,pa.sequence_number
+	,p.name as profileName
+	,p.description as profileDesc
+	,p.profile_id
+	,a.account_id
+from msdb.dbo.sysmail_account a with (nolock)
+	left outer join msdb.dbo.sysmail_profileaccount pa with (nolock)
+		on a.account_id = pa.account_id
+	left outer join msdb.dbo.sysmail_profile p with (nolock)
+		on pa.profile_id = p.profile_id
+	left outer join msdb.dbo.sysmail_principalprofile pp with (nolock)
+		on p.profile_id = pp.profile_id
+	left outer join msdb.dbo.sysmail_server s with (nolock)
+		on a.account_id = s.account_id	
+		
+/*
+
+declare @RecipientsList varchar(max) = 'YOUR EMAIL(S) HERE'
+	,@body varchar(max) = 'this is a test email from ' + @@servername
+	,@subject varchar(max) = 'DBMAIL TEST: ' + @@servername
+
+EXEC msdb.dbo.sp_send_dbmail
+	--@profile_name='Database Mail',
+	@recipients = @RecipientsList,
+	@body = @body,
+	@subject = @subject
+
+*/
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

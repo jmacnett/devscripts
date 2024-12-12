@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>NTLM vs Kerberos detection</Title>
+        <Shortcut></Shortcut>
+	<Description>Test query to verify how your session is connected.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Declarations>
+			<Literal>
+				<ID>username</ID>
+				<ToolTip>Name of the user to filter the query to</ToolTip>
+				<Default>macnettj</Default>
+			</Literal>
+		</Declarations>
+		<Code Language="SQL">
+			<![CDATA[ SELECT
+    s.session_id,
+    c.connect_time,
+    s.login_time,
+    s.login_name,
+    c.protocol_type,
+    c.auth_scheme,
+    s.HOST_NAME,
+    s.program_name,
+	c.net_transport,
+	c.protocol_type,
+	c.client_net_address,
+	c.client_tcp_port,
+	c.local_net_address,
+	c.local_tcp_port
+FROM sys.dm_exec_sessions s
+	inner JOIN sys.dm_exec_connections c
+ON s.session_id = c.session_id
+where login_name like SUSER_SNAME() $end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

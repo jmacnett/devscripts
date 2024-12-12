@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>Find scheduled reports by sql agent guid</Title>
+        <Shortcut></Shortcut>
+	<Description>Preformatted template query for retrieving a list of what SSRS reports are wired up to what GUID-based Sql Agent job.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Declarations>
+		</Declarations>
+		<Code Language="SQL">
+			<![CDATA[
+select rs.ScheduleID, s.LastStatus, c.Path
+	,convert(xml,s.matchdata).value('(/ScheduleDefinition/StartDateTime)[1]','varchar(50)') as startDateTime
+	, rs.*, s.Description, s.ExtensionSettings, s.EventType, s.MatchData
+from ReportServer.dbo.Catalog c with (nolock)
+	inner join ReportServer.dbo.ReportSchedule rs with (nolock)
+		on c.ItemID = rs.ReportID
+	inner join ReportServer.dbo.Subscriptions s
+		on rs.SubscriptionID = s.SubscriptionID
+order by convert(varchar(50),rs.ScheduleID)
+$end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

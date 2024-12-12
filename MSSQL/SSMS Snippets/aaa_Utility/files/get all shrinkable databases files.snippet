@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get all shrinkable database files for server</Title>
+        <Shortcut></Shortcut>
+	<Description>Retrieves all the db files for a given server that could be shrunk, the amount of free space that could be reclaimed, and scripts for execution.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+use master
+go
+
+if(object_id('tempdb..#allFileInfo') is not null) drop table #allFileInfo
+create table #allFileInfo
+(
+	tid int identity(1,1)
+	,dbName sysname
+	,physicalName nvarchar(260)
+	,logicalName sysname
+	,fileType nvarchar(60)
+	,sizeMB float
+	,usedSpaceMB float
+	,freeSpaceMB float
+	,percentFree float
+	,maxSizeMB float
+	,growthRate nvarchar(60)
+	,fileId int
+	,database_id int
+	,nsql nvarchar(max)
+)
+
+insert into #allFileInfo
+select sd.name as dbName
+	,smf.physical_name AS [FileName]
+	,smf.name AS [LogicalName]
+	,smf.type_desc as fileType
+	,smf.size * CONVERT(float,8) / 1024.0 AS [SizeMB]
+	,null AS [UsedSpaceMB]
+	,null AS [FreeSpaceMB]
+	,null AS [percentFree]
+	,case when smf.max_size = -1 then null else smf.max_size * CONVERT(float,8) / 1024.0 end AS [MaxSizeMB]
+	,'by ' + case when smf.is_percent_growth = 1 
+		then convert(varchar(20),smf.growth) + '%'
+		else convert(varchar(20),smf.growth * CONVERT(float,8) / 1024.0) + ' mb' end as GrowthRate
+	,smf.file_id
+	,sd.database_id
+	,N'use [' + sd.name + N']
+UPDATE tempdb..#allFileInfo
+SET UsedSpaceMB = CAST(FILEPROPERTY(@fname, ''SpaceUsed'')  AS float) * CONVERT(float,8) / 1024.0
+	,nsql=null
+where tid = @tid'
+from sys.master_files smf with (nolock)
+	inner join sys.databases sd with (nolock)
+		on smf.database_id = sd.database_id
+where sd.state_desc not in ('OFFLINE') 
+order by dbName, smf.name, smf.file_id
+
+while exists(select * from #allFileInfo with (nolock) where nsql is not null)
+begin
+	declare @nsql nvarchar(max) = null
+		,@fname nvarchar(260) = null
+		,@tid int = null
+	select top 1 @nsql = nsql, @fname=logicalName, @tid=tid from #allFileInfo with (nolock) where nsql is not null
+	exec sp_executesql @nsql, N'@fname nvarchar(260),@tid int', @fname=@fname, @tid=@tid
+end
+
+update #allFileInfo set freeSpaceMB = sizeMB - usedSpaceMB, percentFree = (sizeMB - usedSpaceMB) / sizeMB * 100.0
+
+select left(physicalname,2) as drv
+	,fileType
+	,'USE [' + dbname + ']; DBCC SHRINKFILE (N''' + logicalName + ''' , ' 
+		+ convert(nvarchar(20),convert(int,ceiling(usedSpaceMB + (1024 - (convert(int,ceiling(usedSpaceMB)) % 1024))))) 
+		+ ')' as shrinkToNextGB
+	,'USE [' + dbname + ']; DBCC SHRINKFILE (N''' + logicalName + ''' , ' 
+		+ convert(nvarchar(20),convert(int,ceiling(usedSpaceMB))) 
+		+ ')' as shrinkToMinMB
+	,freeSpaceMB
+	,dbName
+	,logicalName
+	,fileId
+	,percentFree
+	,sizeMB
+	,usedSpaceMB
+	,physicalName
+	,maxSizeMB
+	,growthRate
+	,convert(int,ceiling(usedSpaceMB + (1024 - (convert(int,ceiling(usedSpaceMB)) % 1024)))) as shrinkToNextGBTarget
+	,convert(int,ceiling(usedSpaceMB)) as shrinkToMinMBTarget
+	,database_id
+from #allFileInfo t
+where t.percentFree > 5
+order by t.freeSpaceMB desc
+
+if(object_id('tempdb..#allFileInfo') is not null) drop table #allFileInfo	
+]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

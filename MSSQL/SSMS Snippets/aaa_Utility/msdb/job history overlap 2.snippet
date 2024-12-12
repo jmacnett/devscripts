@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>job history overlap redux</Title>
+        <Shortcut></Shortcut>
+	<Description>Given a point in time, detect all sql agent jobs that were executing at that point</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+use msdb
+
+declare @pointInTime datetime = getdate()
+
+select *
+from
+(
+	select *
+		,dateadd(second,run_duration,runStart) as runEnd
+	from
+	(
+		select sj.name,
+			 convert(datetime, left(convert(nvarchar(20),run_date),4) + '-' + SUBSTRING(convert(nvarchar(20),run_date),5,2) + '-' + right(convert(nvarchar(20),run_date),2) 
+			+ ' ' + left(right('000000' + convert(varchar(20),run_time), 6),2) + ':' + substring(right('000000' + convert(varchar(20),run_time), 6),3,2) + ':' + right(right('000000' + convert(varchar(20),run_time), 6),2)) as runStart
+			,run_duration
+		from dbo.sysjobhistory jh with (nolocK)
+			inner join dbo.sysjobs sj with (nolock)
+				on jh.job_id = sj.job_id
+		where step_name = '(Job outcome)'
+	) s1
+) s2
+where runStart <= @pointInTime
+	and runEnd >= @pointInTime
+order by runStart desc
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

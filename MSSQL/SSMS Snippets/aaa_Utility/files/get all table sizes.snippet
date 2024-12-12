@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get all table sizes in kb</Title>
+        <Shortcut></Shortcut>
+	<Description>Test query to return the size (in kb) of all tables in the database</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+if(OBJECT_ID('dbo.tmpSpace') is not null) drop table dbo.tmpSpace
+create table dbo.tmpSpace(name sysname
+	,[rows] bigint
+	,[Reserved/Total_Kb] bigint
+	,[Data_Kb] bigint
+	,[Idx_Size_Kb] bigint
+	,[Unused_Kb] bigint
+	,[KbPerRow] decimal(20,6)
+	,[PercentOfSpace_Data] decimal(20,6)
+	,[PercentOfSpace_Idx] decimal(20,6)
+	,[PercentOfSpace_Unused] decimal(20,6))
+
+declare @tmp table(name sysname, [rows] int, reserved sysname, data sysname, index_size sysname, unused sysname)
+
+insert into @tmp
+EXEC sp_MSforeachtable @command1="EXEC sp_spaceused '?'"
+
+update @tmp set 
+	reserved = REPLACE(reserved, ' KB','')
+	,data = REPLACE(data, ' KB','')
+	,index_size = REPLACE(index_size, ' KB','')
+	,unused = REPLACE(unused, ' KB','')
+
+insert into tmpSpace(name, [rows], [Reserved/Total_Kb], [Data_Kb], [Idx_Size_Kb], [Unused_Kb])
+select name, CONVERT(bigint, [rows]),CONVERT(bigint, reserved), CONVERT(bigint, data), CONVERT(bigint, index_size),
+	CONVERT(bigint, unused)
+from @tmp
+
+update tmpSpace set 
+	KbPerRow = case when [rows] = 0 then 0 else ([Data_KB] + [Idx_Size_Kb] + [Unused_Kb]) / convert(decimal(20,6), [rows]) end
+	,PercentOfSpace_Data = case when [Reserved/Total_Kb] = 0 then 0 else [Data_KB] / convert(decimal(20,6), [Reserved/Total_KB]) end
+	,PercentOfSpace_Idx = case when [Reserved/Total_Kb] = 0 then 0 else [Idx_Size_Kb] / convert(decimal(20,6), [Reserved/Total_KB]) end
+	,PercentOfSpace_Unused = case when [Reserved/Total_Kb] = 0 then 0 else [Unused_Kb] / convert(decimal(20,6), [Reserved/Total_KB]) end
+
+
+select t.*
+	,dsidx.name as FileGroup
+	,ISNULL(dstext.name,N'') AS [TextFileGroup]
+	,CASE WHEN 'FD'=dstbl.type THEN dstbl.name ELSE N'' END AS [FileStreamFileGroup]
+from tmpSpace t with (nolock)
+	inner join sys.tables st with (nolocK)
+		on t.name = st.name
+	INNER JOIN sys.indexes AS idx ON 
+		idx.object_id = st.object_id and (idx.index_id < 2)
+	LEFT OUTER JOIN sys.data_spaces AS dstext ON st.lob_data_space_id = dstext.data_space_id
+	LEFT OUTER JOIN sys.data_spaces AS dsidx ON dsidx.data_space_id = idx.data_space_id
+	LEFT OUTER JOIN sys.data_spaces AS dstbl ON dstbl.data_space_id = st.Filestream_data_space_id and (idx.index_id < 2 or (idx.type = 7 and idx.index_id < 3))
+order by [Reserved/Total_Kb] desc
+
+if(OBJECT_ID('dbo.tmpSpace') is not null) drop table dbo.tmpSpace			
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

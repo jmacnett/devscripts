@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>View running request status (including dbcc shrink)</Title>
+        <Shortcut></Shortcut>
+	<Description>Test query to view progress of currently running queries in an MSSQL database.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[select R.total_elapsed_time
+	,T.text
+	,R.Status
+	,R.Command
+	,r.wait_type
+	,r.last_wait_type
+	,s.host_name
+	,sd.name as DatabaseName
+	,R.cpu_time
+	,s.session_id
+	,r.blocking_session_id
+	,r.estimated_completion_time
+	,R.percent_complete
+from sys.dm_exec_requests R with (Nolock)
+	inner join sys.dm_exec_sessions s with (nolock)
+		on r.session_id = s.session_id
+	inner join sys.databases sd with (nolocK)
+		on r.database_id = sd.database_id
+	cross apply sys.dm_exec_sql_text(R.sql_handle) T
+where r.session_id <> @@SPID
+order by R.total_elapsed_time desc $end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

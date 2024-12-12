@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>statistics refresh by table</Title>
+        <Shortcut></Shortcut>
+	<Description>for a given table, pull the last time each statistic was updated.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Declarations>
+			<Literal>
+				<ID>tablename</ID>
+				<ToolTip>Table Name</ToolTip>
+				<Default>xxxxx</Default>
+			</Literal>
+		</Declarations>
+		<Code Language="SQL">
+			<![CDATA[
+select so.name, STATS_DATE(so.object_id,ss.stats_id) as lastUpdated, ss.*
+from sys.stats ss with (nolock)
+	inner join sys.objects so with (nolock)
+		on ss.object_id = so.object_id
+where so.name = '$tablename$'
+order by lastUpdated asc
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

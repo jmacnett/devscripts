@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>recovery mode status check</Title>
+        <Shortcut></Shortcut>
+	<Description>For a database in recovery mode, scrapes the error log for the most up-to-date status of the recovery process</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+use master
+go
+
+DECLARE @DBName VARCHAR(64) = 'REPLACE_ME'
+
+DECLARE @ErrorLog AS TABLE([LogDate] CHAR(24), [ProcessInfo] VARCHAR(64), [TEXT] VARCHAR(MAX))
+
+INSERT INTO @ErrorLog
+EXEC master..sp_readerrorlog 0, 1, 'Recovery of database', @DBName
+
+INSERT INTO @ErrorLog
+EXEC master..sp_readerrorlog 0, 1, 'Recovery completed', @DBName
+
+SELECT TOP 1
+    @DBName AS [DBName]
+   ,[LogDate]
+   ,CASE
+      WHEN SUBSTRING([TEXT],10,1) = 'c'
+      THEN '100%'
+      ELSE SUBSTRING([TEXT], CHARINDEX(') is ', [TEXT]) + 4,CHARINDEX(' complete (', [TEXT]) - CHARINDEX(') is ', [TEXT]) - 4)
+      END AS PercentComplete
+   ,CASE
+      WHEN SUBSTRING([TEXT],10,1) = 'c'
+      THEN 0
+      ELSE CAST(SUBSTRING([TEXT], CHARINDEX('approximately', [TEXT]) + 13,CHARINDEX(' seconds remain', [TEXT]) - CHARINDEX('approximately', [TEXT]) - 13) AS FLOAT)/60.0
+      END AS MinutesRemaining
+   ,CASE
+      WHEN SUBSTRING([TEXT],10,1) = 'c'
+      THEN 0
+      ELSE CAST(SUBSTRING([TEXT], CHARINDEX('approximately', [TEXT]) + 13,CHARINDEX(' seconds remain', [TEXT]) - CHARINDEX('approximately', [TEXT]) - 13) AS FLOAT)/60.0/60.0
+      END AS HoursRemaining
+   ,[TEXT]
+FROM @ErrorLog ORDER BY CAST([LogDate] as datetime) DESC, [MinutesRemaining]	
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

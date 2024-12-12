@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>Find foreign key references for object</Title>
+        <Shortcut></Shortcut>
+	<Description>Find all direct child tables via FK for a given referenced table</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Declarations>
+			<Literal>
+				<ID>objectname</ID>
+				<ToolTip>Name of the object to filter the query by</ToolTip>
+				<Default>tablename</Default>
+			</Literal>
+		</Declarations>
+		<Code Language="SQL">
+			<![CDATA[select sfk.name as FKName
+	,rso.name as ReferencedObject
+	,rsc.name as ReferencedColumn
+	,pso.name as FKParentObject
+	,psc.name as FKParentColumn
+	,sfkc.constraint_column_id as FKColumnID
+from sys.foreign_keys sfk with (nolock)
+	inner join sys.objects rso with (nolock)
+		on sfk.referenced_object_id = rso.object_id
+	inner join sys.objects pso with (nolock)
+		on sfk.parent_object_id = pso.object_id
+	inner join sys.foreign_key_columns sfkc with (nolock)
+		on sfk.object_id = sfkc.constraint_object_id
+	inner join sys.columns rsc with (nolocK)
+		on sfkc.referenced_object_id = rsc.object_id
+			and sfkc.referenced_column_id = rsc.column_id
+	inner join sys.columns psc with (nolocK)
+		on sfkc.parent_object_id = psc.object_id
+			and sfkc.parent_column_id = psc.column_id
+where rso.name like '%$objectname$%'$end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get all tables by filegroup</Title>
+        <Shortcut></Shortcut>
+	<Description>Retrieves all tables (and optionally indexes) in a database and their corresponding filegroups.  Optionally, an index rebuild script is available.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+/* tables and filegroups */
+select distinct so.name as tableName, fg.name as filegroupName
+from sys.filegroups fg
+	inner join sys.indexes si with (nolock)
+		on fg.data_space_id = si.data_space_id
+	inner join sys.objects so with (nolock)
+		on si.object_id = so.object_id
+where so.type = 'U'
+order by fg.name, so.name
+
+/* tables, indexes and filegroups */
+select so.name as tableName, so.type_desc, si.name as idxname, si.type_desc, fg.name as fgname
+from sys.filegroups fg
+	inner join sys.indexes si with (nolock)
+		on fg.data_space_id = si.data_space_id
+	inner join sys.objects so with (nolock)
+		on si.object_id = so.object_id
+where so.type = 'U'
+order by so.name, si.name, fg.name
+
+/* tables, indexes and filegroups w/ reindex script;  WARNING: can take a very long time to run */
+select so.name as tableName, so.type_desc, si.name as idxname, si.type_desc, fg.name as fgname
+	,s.avg_fragmentation_in_percent
+	, 'ALTER INDEX [' + si.name + '] ON [' + ss.name + '].[' + so.name + '] REBUILD' as rebuildScript
+from sys.filegroups fg
+	inner join sys.indexes si with (nolock)
+		on fg.data_space_id = si.data_space_id
+	inner join sys.dm_db_index_physical_stats(db_id(), null, null, null, null) s on s.object_id = si.object_id and s.index_id = si.index_id
+	inner join sys.objects so with (nolock)
+		on si.object_id = so.object_id
+	inner join sys.schemas ss with (nolock)
+		on so.schema_id = ss.schema_id
+where so.type = 'U'
+order by fg.name, so.name, si.name
+]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

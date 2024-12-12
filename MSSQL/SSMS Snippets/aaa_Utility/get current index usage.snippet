@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get current index usage</Title>
+        <Shortcut></Shortcut>
+	<Description>Returns the current usage of all indexes for a table in the database since the last rebuild</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+SELECT s.database_id
+		,db_name(s.database_id) as DbName
+		,s.[object_id]
+		,so.name as ObjectName
+		,s.index_id
+		,si.name as IndexName
+		,s.user_seeks
+		,s.user_scans
+		,s.user_lookups
+		,s.user_seeks + s.user_scans + s.user_lookups AS total_user_reads
+		,s.user_updates
+		,s.last_user_seek
+		,s.last_user_scan
+		,s.last_user_lookup
+		,s.last_user_update
+	FROM sys.dm_db_index_usage_stats s
+	inner join sys.objects so with (nolock)
+		on s.object_id = so.object_id
+	inner join sys.indexes si with (nolocK)
+		on so.object_id = si.object_id
+			and s.index_id = si.index_id
+	WHERE s.database_id > 4 /* omit system dbs */
+		AND s.index_id > 0 /* filter out heaps */
+		AND s.database_id = DB_ID()
+		and so.name like '%%'
+	order by total_user_reads desc	
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

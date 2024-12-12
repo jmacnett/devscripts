@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>get all databases info for server</Title>
+        <Shortcut></Shortcut>
+	<Description>Test query to return file, size, and select configuration information for all databases on a server.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+declare @dblist table(dbname sysname)
+insert into @dblist(dbname)
+select name 
+from sys.databases with (nolock)
+
+declare @res table
+(
+	dbname sysname
+	,recoveryModel nvarchar(60)
+	,logicalName sysname
+	,physical_name nvarchar(260)
+	,sizeMB decimal (18,6)
+	,max_sizeMB decimal (18,6)
+	,is_percent_growth bit
+	,growthMB decimal (18,6)
+	,growthPercentage decimal (18,6)
+)
+
+while exists (select * from @dblist)
+begin
+	declare @db sysname = null, @esql varchar(max) = null
+	select top 1 @db = dbname from @dblist
+
+	set @esql = '
+	select sd.name
+		,sd.recovery_model_desc
+		,sdf.name as logicalName
+		,physical_name
+		,size * convert(bigint,8) / 1024.0 as sizeMB
+		,max_size * convert(bigint,8) / 1024.0 as max_sizeMB
+		,is_percent_growth
+		,case when is_percent_growth = 0 then growth * convert(bigint,8) / 1024.0 else -1 end as growthMB
+		,case when is_percent_growth = 1 then growth else -1 end as growthPercentage
+	from [' + @db + '].sys.database_files sdf with (nolock)
+		inner join sys.databases sd with (nolock)
+			on sd.name = ''' + @db + '''
+	'
+
+	insert into @res
+	exec (@esql)
+
+	delete from @dblist where dbname = @db
+end
+
+select *
+from @res
+order by dbname		
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

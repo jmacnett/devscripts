@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>Recompile all object definitions</Title>
+        <Shortcut></Shortcut>
+	<Description>Invokes sp_refreshsqlmodule against all objects with definition entries in sys.sql_modules in the database.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+	set nocount on
+	declare @toExec table(tid int identity(1,1), oname sysname, otype sysname, rorder int, esql varchar(max))
+
+	insert into @toExec (oname, otype, rorder, esql)
+	SELECT so.name, so.type
+		, case when so.type in ('TF','FN') then 1
+			when so.type in ('V') then 2
+			else 3 end as refreshOrder
+		,'exec sp_refreshsqlmodule @name=''' + so.name + '''
+exec sp_recompile @objname=''' + so.name + ''''
+	from sys.sql_modules ssm with (nolock)
+		inner join sys.objects so with (nolock)
+			on ssm.object_id = so.object_id
+	order by refreshOrder, so.type, so.name
+
+	while exists(select * from @toExec)
+	begin
+		declare @esql varchar(max) = null, @oname sysname = null, @otype sysname = null
+		select top 1 @esql = esql, @oname = oname, @otype = otype from @toExec
+
+		print ('refreshing ' + @otype + ' object ' + @oname + '...')
+		begin try
+			exec (@esql)
+		end try
+		begin catch
+			print ('
+
+*** REFRESH FAILED *** 
+Type: ' + @otype + ' Object: ' + @oname + '
+**********************
+
+')
+		end catch
+
+		delete from @toExec where oname = @oname
+	end
+
+	set nocount off $end$]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

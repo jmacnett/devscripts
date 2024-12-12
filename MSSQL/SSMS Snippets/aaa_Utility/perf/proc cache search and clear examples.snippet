@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>proc cache search and clear examples</Title>
+        <Shortcut></Shortcut>
+	<Description>Queries to check the proc cache for specific cases, and script out clearing statements as required.</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+/* plan clearing examples */
+
+	-- view all
+	select so.name
+		, plantxt.objectid
+		, planTxt.text
+		, cp.cacheobjtype
+		, cp.objtype
+		, cp.refcounts
+		, cp.usecounts
+		, cp.size_in_bytes
+		, cp.plan_handle
+		, qp.query_plan
+	from sys.dm_exec_cached_plans cp with (nolocK)
+		cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+		cross apply sys.dm_exec_text_query_plan(cp.plan_handle,default,default) qp
+		left outer join sys.objects so with (nolock)
+			on planTxt.objectid = so.object_id
+	where planTxt.dbid = db_id()
+	order by name, planTxt.text
+
+
+	-- potential duplicates by text
+	select planTxt.text, so.name, count(*) as instanceCount
+	from sys.dm_exec_cached_plans cp with (nolocK)
+		cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+		left outer join sys.objects so with (nolock)
+			on planTxt.objectid = so.object_id
+	where planTxt.dbid = db_id()
+	group by planTxt.text, so.name
+	having count(*) > 1
+	order by instanceCount desc
+
+
+/* all adhoc plans for a db */
+/*
+	select 'dbcc freeproccache (' + convert(nvarchar(max),cp.plan_handle, 1) + ')' as esql
+		, cp.plan_handle
+		, planTxt.text
+		, cp.refcounts
+		, cp.usecounts
+	from sys.dm_exec_cached_plans cp with (nolocK)
+		cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+		--left outer join sys.objects so with (nolock)
+		--	on planTxt.objectid = so.object_id
+	where planTxt.dbid = db_id()
+		and objtype in ('AdHoc','Prepared')
+	order by planTxt.text
+*/
+
+/* all plans for a given object */
+/*
+
+	select 'dbcc freeproccache (' + convert(nvarchar(max),cp.plan_handle, 1) + ')' + case when so.name is not null then '
+exec sp_recompile ''' + so.name + '''' else '' end as esql
+		,'exec sp_recompile ''' + so.name + ''''
+		,so.name
+		,cp.plan_handle
+		, planTxt.text
+	from sys.dm_exec_cached_plans cp with (nolocK)
+		cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+		left outer join sys.objects so with (nolock)
+			on planTxt.objectid = so.object_id
+	where planTxt.dbid = db_id()
+		and (so.name like '%%' OR planTxt.text like '%%')
+		--and so.name in ( )
+	order by planTxt.text
+
+*/
+
+/* duplicate plan clearing */
+/*
+
+	select cp.plan_handle
+		, dupes.name
+		, dupes.text
+		, dupes.instanceCount
+		,'dbcc freeproccache (' + convert(nvarchar(max),cp.plan_handle, 1) + ')'
+	from sys.dm_exec_cached_plans cp with (nolocK)
+		cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+		left outer join sys.objects so with (nolock)
+			on planTxt.objectid = so.object_id
+		inner join
+		(
+			select planTxt.text, so.name, count(*) as instanceCount
+			from sys.dm_exec_cached_plans cp with (nolocK)
+				cross APPLY sys.dm_exec_sql_text (cp.plan_handle) planTxt
+				left outer join sys.objects so with (nolock)
+					on planTxt.objectid = so.object_id
+			where planTxt.dbid = db_id()
+			group by planTxt.text, so.name
+			having count(*) > 1
+		) dupes	
+			on planTxt.text = dupes.text
+	where planTxt.dbid = db_id()
+	order by instanceCount desc
+
+*/	
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

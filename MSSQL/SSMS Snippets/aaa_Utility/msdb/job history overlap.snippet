@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+<_locDefinition xmlns="urn:locstudio">
+    <_locDefault _loc="locNone" />
+    <_locTag _loc="locData">Title</_locTag>
+    <_locTag _loc="locData">Description</_locTag>
+    <_locTag _loc="locData">Author</_locTag>
+    <_locTag _loc="locData">ToolTip</_locTag>
+</_locDefinition>
+	<CodeSnippet Format="1.0.0">
+	<Header>
+	<Title>job history overlap</Title>
+        <Shortcut></Shortcut>
+	<Description>Given a point in time, detect all sql agent jobs that were executing at that point</Description>
+	<Author>Jesse MacNett</Author>
+	<SnippetTypes>
+		<SnippetType>Expansion</SnippetType>
+	</SnippetTypes>
+	</Header>
+	<Snippet>
+		<Code Language="SQL">
+			<![CDATA[
+use msdb
+go
+
+declare @testPoint datetime = getdate()
+declare @rangeOffsetMM int = 30
+
+select src.*
+	,datediff(second, runStart,@testPoint) as diffStart
+	,datediff(second, runEnd,@testPoint) as diffEnd
+	,case when runStart <= @testPoint and runEnd >= @testPoint then 1 else 0 end as Overlapped
+from
+(
+	select 
+		convert(datetime,convert(varchar(20),run_date) + ' ' + STUFF(STUFF(RIGHT(REPLICATE('0', 6) +  CAST(h.run_time as varchar(6)), 6), 3, 0, ':'), 6, 0, ':')) as runStart
+		,DATEADD(second, h.run_duration % 100,
+			DATEADD(minute, h.run_duration / 100 % 100,
+			DATEADD(hour, h.run_duration / 100 / 100, convert(datetime,convert(varchar(20),run_date) + ' ' + STUFF(STUFF(RIGHT(REPLICATE('0', 6) +  CAST(h.run_time as varchar(6)), 6), 3, 0, ':'), 6, 0, ':'))
+			))) as runEnd
+		,h.run_duration
+		,h.run_duration / 100 / 100 as durationHH
+		,h.run_duration / 100 % 100 as durationMM
+		,h.run_duration % 100 as durationSS
+		,j.name as jobName
+		--,h.*
+	from msdb.dbo.sysjobhistory h with (nolock)
+		left outer join msdb.dbo.sysjobs j with (nolock)
+			on h.job_id = j.job_id
+	where h.step_id = 0
+) src
+where @testPoint between DATEADD(minute,-1 * @rangeOffsetMM,runStart) and DATEADD(minute,@rangeOffsetMM, runEnd)
+order by runStart desc	
+			]]>
+		</Code>
+	</Snippet>
+	</CodeSnippet>
+</CodeSnippets>
