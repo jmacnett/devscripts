@@ -7,7 +7,7 @@ The point of this is to provide a quick way of using the psql command-line inter
 ## Versions
 There are currently two versions of this available, which can be catered to your own situation:
 - alpine (3.18): very small, quick to spin up, but limited by alpine repos if you need other tools.
-- ubuntu (20.04): heavier, but apt has pretty extensive offerings in terms of other packages available for use.
+- ubuntu (22.04): heavier, but apt has pretty extensive offerings in terms of other packages available for use.
 
 ## Prebuilt copies of image
 These are available at https://hub.docker.com/r/macnettj/pgclient14
